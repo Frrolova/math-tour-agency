@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Математический Квест: Побег из Лаборатории</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <style>
+    :root {
+      --bg: #0a0e14;
+      --panel: #151a21;
+      --border: #2d3748;
+      --accent: #00e676;
+      --gold: #ffd54f;
+      --danger: #ef5350;
+      --text: #e2e8f0;
+      --muted: #94a3b8;
+      --font-main: 'Segoe UI', system-ui, sans-serif;
+      --font-mono: 'Courier New', monospace;
+    }
+    * { box-sizing: border-box; }
+    body {
+      font-family: var(--font-main);
+      background: var(--bg);
+      color: var(--text);
+      margin: 0; padding: 20px;
+      line-height: 1.5;
+    }
+    .container { max-width: 800px; margin: 0 auto; }
+    
+    /* SCREENS */
+    .screen { display: none; }
+    .screen.active { display: block; animation: fadeIn 0.4s ease; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+    /* HEADER */
+    header {
+      display: flex; justify-content: space-between; align-items: center;
+      background: var(--panel); padding: 15px; border-radius: 10px;
+      border-bottom: 3px solid var(--accent); margin-bottom: 20px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+    }
+    .timer { font-family: var(--font-mono); font-size: 28px; color: var(--gold); font-weight: bold; }
+    .hints-badge { background: #334155; padding: 5px 10px; border-radius: 15px; font-size: 14px; }
+
+    /* PROGRESS */
+    .progress-wrap { background: #1e293b; height: 8px; border-radius: 4px; margin-bottom: 20px; overflow: hidden; }
+    .progress-fill { height: 100%; background: var(--accent); width: 0%; transition: width 0.5s ease; }
+
+    /* TASK BOX */
+    .task-box {
+      background: var(--panel); padding: 25px; border-radius: 10px;
+      border: 1px solid var(--border); min-height: 250px; position: relative;
+    }
+    .stage-title { color: var(--accent); font-size: 22px; margin: 0 0 10px; }
+    .story {
+      font-style: italic; color: var(--muted); padding: 12px;
+      background: #0f172a; border-left: 4px solid var(--gold); margin-bottom: 15px; border-radius: 0 6px 6px 0;
+    }
+    .math-problem {
+      background: #020617; padding: 15px; border-radius: 6px; text-align: center;
+      font-size: 20px; font-family: var(--font-mono); color: var(--text); margin: 15px 0;
+      border: 1px dashed #334155;
+    }
+    
+    /* INPUTS & BUTTONS */
+    .controls { display: flex; gap: 10px; margin-top: 20px; flex-wrap: wrap; }
+    input {
+      background: #0f172a; color: var(--accent); border: 1px solid var(--border);
+      padding: 12px; font-size: 18px; border-radius: 6px; width: 150px; text-align: center;
+      font-family: var(--font-mono);
+    }
+    input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 2px rgba(0,230,118,0.2); }
+    button {
+      background: var(--accent); color: #000; border: none; padding: 12px 20px;
+      font-size: 15px; border-radius: 6px; cursor: pointer; font-weight: bold; transition: 0.2s;
+    }
+    button:hover { opacity: 0.9; transform: translateY(-1px); }
+    button:active { transform: translateY(0); }
+    button.secondary { background: #475569; color: white; }
+    button.danger { background: var(--danger); color: white; }
+    
+    /* FEEDBACK */
+    .feedback { margin-top: 15px; padding: 12px; border-radius: 6px; display: none; }
+    .correct { background: rgba(34,197,94,0.15); border: 1px solid var(--accent); color: var(--accent); }
+    .wrong { background: rgba(239,83,80,0.15); border: 1px solid var(--danger); color: var(--danger); }
+    .shake { animation: shake 0.4s; }
+    @keyframes shake { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-8px)} 75%{transform:translateX(8px)} }
+
+    /* START & FINAL SCREENS */
+    .center-box { text-align: center; padding: 40px; }
+    .title-main { font-size: 32px; color: var(--accent); margin-bottom: 10px; }
+    .subtitle { color: var(--muted); margin-bottom: 30px; }
+    .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px,1fr)); gap: 15px; margin: 20px 0; }
+    .stat-card { background: #1e293b; padding: 15px; border-radius: 8px; text-align: center; }
+    .stat-val { font-size: 28px; font-weight: bold; color: var(--gold); }
+    
+    /* REPORT PREVIEW */
+    #reportPreview {
+      display: none; background: #fff; color: #111; padding: 40px; margin: 30px auto;
+      max-width: 850px; box-shadow: 0 0 20px rgba(0,0,0,0.3); border-radius: 4px;
+    }
+    #reportPreview h1, #reportPreview h2 { color: #1e3a8a; }
+    #reportPreview table { width: 100%; border-collapse: collapse; margin: 10px 0; }
+    #reportPreview th, #reportPreview td { border: 1px solid #ccc; padding: 10px; text-align: left; }
+    #reportPreview th { background: #1e3a8a; color: #fff; }
+
+    footer { text-align: center; margin-top: 30px; color: #64748b; font-size: 12px; }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <!-- START SCREEN -->
+  <div id="screen-start" class="screen active">
+    <div class="center-box">
+      <h1 class="title-main">🔐 Математический Квест</h1>
+      <p class="subtitle">Лаборатория Профессора Формулы | 8 класс</p>
+      <p>Вы оказались заперты в кабинете. На экране горит надпись: <em>«Математика — ваш единственный ключ. Время пошло!»</em></p>
+      <input type="text" id="teamName" placeholder="Название команды" style="width:100%; max-width:300px; margin-bottom:15px;">
+      <button onclick="startGame()">🚀 Начать побег</button>
+    </div>
+  </div>
+
+  <!-- GAME SCREEN -->
+  <div id="screen-game" class="screen">
+    <header>
+      <div>👥 <span id="dispTeam">Команда</span></div>
+      <div class="timer" id="timer">00:00</div>
+      <div class="hints-badge">💡 <span id="hintsLeft">3</span></div>
+    </header>
+    <div class="progress-wrap"><div class="progress-fill" id="progress"></div></div>
+    
+    <div class="task-box" id="taskBox">
+      <h2 class="stage-title" id="stageTitle">Этап 1</h2>
+      <div class="story" id="storyText"></div>
+      <div class="math-problem" id="problemText"></div>
+      <div style="text-align:center;">
+        <label style="display:block; margin-bottom:8px; color:#94a3b8;">Введите цифру кода:</label>
+        <input type="text" id="answerInput" maxlength="3" placeholder="Например: 7">
+      </div>
+      <div class="controls" style="justify-content:center; margin-top:15px;">
+        <button onclick="checkAnswer()">🔓 Открыть замок</button>
+        <button class="secondary" onclick="useHint()">💡 Подсказка</button>
+      </div>
+      <div class="feedback" id="feedback"></div>
+      <div id="hintBox" style="display:none; margin-top:10px; padding:10px; background:#1e293b; border-radius:6px; color:#94a3b8;"></div>
+    </div>
+  </div>
+
+  <!-- VICTORY SCREEN -->
+  <div id="screen-victory" class="screen">
+    <div class="center-box">
+      <h1 class="title-main">🎉 ПОБЕДА!</h1>
+      <p class="subtitle">Дверь лаборатории открыта. Вы выбрались благодаря математике!</p>
+      <div class="stats-grid">
+        <div class="stat-card"><div class="stat-val" id="vTime">00:00</div><div>Время</div></div>
+        <div class="stat-card"><div class="stat-val" id="vHints">0</div><div>Подсказок</div></div>
+        <div class="stat-card"><div class="stat-val">4/4</div><div>Этапов пройдено</div></div>
+      </div>
+      <div style="display:flex; gap:10px; justify-content:center; flex-wrap:wrap;">
+        <button onclick="generateReport()">📄 Сформировать отчёт</button>
+        <button class="secondary" onclick="exportPDF()">📥 Скачать PDF</button>
+        <button class="secondary" onclick="exportWord()">📝 Скачать Word</button>
+        <button class="danger" onclick="location.reload()">🔄 Играть снова</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- REPORT PREVIEW (Hidden) -->
+  <div id="reportPreview"></div>
+</div>
+
+<footer>Проект по математике | 8 класс | «Математический квест: Побег из комнаты»</footer>
+
+<script>
+  // === DATA ===
+  const tasks = [
+    {
+      title: "Этап 1: Сейф с документами",
+      story: "На столе стоит сейф. Рядом записка: «Корни уравнения x² − 7x + 12 = 0 дадут вам первую цифру кода. Возьмите меньший корень.»",
+      problem: "x<sup>2</sup> − 7x + 12 = 0 → x<sub>1</sub> < x<sub>2</sub> = ?",
+      answer: "3",
+      hint: "D = b² − 4ac = 49 − 48 = 1. x = (7 ± 1) / 2. Корни: 3 и 4. Меньший = 3."
+    },
+    {
+      title: "Этап 2: План комнаты",
+      story: "В сейфе лежит чертёж пола. Нужно вычислить площадь закрашенной зоны, чтобы найти направление. Прямоугольник 8×6, внутри вырезан квадрат 2×2. Первая цифра площади — вторая цифра кода.",
+      problem: "S = (8 × 6) − (2 × 2) = ? → первая цифра",
+      answer: "4",
+      hint: "S<sub>пр</sub> = 48, S<sub>кв</sub> = 4. S<sub>итог</sub> = 44. Первая цифра = 4."
+    },
+    {
+      title: "Этап 3: Люк в потолке",
+      story: "Люк закрыт цифровой панелью. На стене формула: «Цифра десятков гипотенузы прямоугольного треугольника с катетами 5 и 12 см.»",
+      problem: "c = √(5² + 12²) → цифра десятков",
+      answer: "1",
+      hint: "5²=25, 12²=144. c²=169 → c=13. Десятки = 1."
+    },
+    {
+      title: "Этап 4: Финальная дверь",
+      story: "Осталась последняя преграда. На экране: «Товар стоил 2000₽, скидка 25%. Найди новую цену. Сумма цифр результата — последняя цифра кода.»",
+      problem: "2000₽ − 25% = ? → сумма цифр",
+      answer: "6",
+      hint: "25% = 1/4. 2000 / 4 = 500. Новая цена = 1500. 1+5+0+0 = 6."
+    }
+  ];
+
+  // === STATE ===
+  let state = {
+    team: "Команда 1",
+    current: 0,
+    timer: 0,
+    interval: null,
+    hints: 3,
+    startTime: Date.now(),
+    log: []
+  };
+
+  // === CORE FUNCTIONS ===
+  function startGame() {
+    state.team = document.getElementById('teamName').value.trim() || "Команда 1";
+    document.getElementById('dispTeam').textContent = state.team;
+    switchScreen('screen-game');
+    loadTask(0);
+    state.startTime = Date.now();
+    state.interval = setInterval(updateTimer, 1000);
+  }
+
+  function switchScreen(id) {
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+  }
+
+  function updateTimer() {
+    state.timer++;
+    const m = String(Math.floor(state.timer / 60)).padStart(2, '0');
+    const s = String(state.timer % 60).padStart(2, '0');
+    document.getElementById('timer').textContent = `${m}:${s}`;
+  }
+
+  function loadTask(idx) {
+    if (idx >= tasks.length) return victory();
+    state.current = idx;
+    const t = tasks[idx];
+    document.getElementById('stageTitle').textContent = t.title;
+    document.getElementById('storyText').textContent = t.story;
+    document.getElementById('problemText').innerHTML = t.problem;
+    document.getElementById('answerInput').value = '';
+    document.getElementById('feedback').style.display = 'none';
+    document.getElementById('hintBox').style.display = 'none';
+    document.getElementById('hintsLeft').textContent = state.hints;
+    document.getElementById('progress').style.width = `${(idx / tasks.length) * 100}%`;
+    document.getElementById('answerInput').focus();
+  }
+
+  function checkAnswer() {
+    const input = document.getElementById('answerInput').value.trim();
+    const task = tasks[state.current];
+    const fb = document.getElementById('feedback');
+    const inp = document.getElementById('answerInput');
+
+    if (!input) return;
+    if (input === task.answer) {
+      fb.className = 'feedback correct';
+      fb.innerHTML = `✅ <b>Верно!</b> ${task.answer === input ? task.hint.split('. ')[0] : 'Код принят.'} Замок открывается...`;
+      fb.style.display = 'block';
+      state.log.push({ stage: state.current + 1, status: 'ok', hints: 0, time: state.timer });
+      
+      setTimeout(() => loadTask(state.current + 1), 1500);
+    } else {
+      inp.classList.add('shake');
+      setTimeout(() => inp.classList.remove('shake'), 400);
+      fb.className = 'feedback wrong';
+      fb.innerHTML = `❌ <b>Ошибка.</b> Проверьте расчёты. Попробуйте ещё раз.`;
+      fb.style.display = 'block';
+    }
+  }
+
+  function useHint() {
+    if (state.hints <= 0) return alert('Подсказки закончились!');
+    state.hints--;
+    document.getElementById('hintsLeft').textContent = state.hints;
+    const box = document.getElementById('hintBox');
+    box.textContent = `💡 Подсказка: ${tasks[state.current].hint}`;
+    box.style.display = 'block';
+    state.log[state.current].hints = 1;
+  }
+
+  function victory() {
+    clearInterval(state.interval);
+    document.getElementById('progress').style.width = '100%';
+    const m = String(Math.floor(state.timer / 60)).padStart(2, '0');
+    const s = String(state.timer % 60).padStart(2, '0');
+    document.getElementById('vTime').textContent = `${m}:${s}`;
+    document.getElementById('vHints').textContent = 3 - state.hints;
+    switchScreen('screen-victory');
+  }
+
+  // === EXPORT & REPORT ===
+  function generateReport() {
+    const m = String(Math.floor(state.timer / 60)).padStart(2, '0');
+    const s = String(state.timer % 60).padStart(2, '0');
+    const date = new Date().toLocaleString('ru-RU');
+    const preview = document.getElementById('reportPreview');
+    
+    let logHTML = `<table>
+      <tr><th>Этап</th><th>Тема (8 класс)</th><th>Результат</th><th>Подсказки</th></tr>`;
+    tasks.forEach((t, i) => {
+      logHTML += `<tr>
+        <td>${t.title}</td>
+        <td>${i===0?'Квадратные уравнения':i===1?'Площади фигур':i===2?'Теорема Пифагора':'Проценты'}</td>
+        <td>✅ Верно</td>
+        <td>${state.log[i]?.hints ? '1 шт.' : 'Нет'}</td>
+      </tr>`;
+    });
+    logHTML += `</table>`;
+
+    preview.innerHTML = `
+      <h1>Отчёт: Математический Квест «Побег из Лаборатории»</h1>
+      <p><b>Класс:</b> 8 | <b>Дата:</b> ${date} | <b>Команда:</b> ${state.team}</p>
+      <h2>1. Цель проекта</h2>
+      <p>Закрепить знания по алгебре и геометрии (квадратные уравнения, теорема Пифагора, площади, проценты) в нестандартной игровой ситуации.</p>
+      <h2>2. Ход квеста</h2>
+      ${logHTML}
+      <p><b>Общее время:</b> ${m}:${s} | <b>Использовано подсказок:</b> ${3 - state.hints}</p>
+      <h2>3. Математические формулы</h2>
+      <ul>
+        <li>Дискриминант: D = b² − 4ac, x = (−b ± √D) / 2a</li>
+        <li>Площади: S<sub>пр</sub> = a·b, S<sub>кв</sub> = a²</li>
+        <li>Теорема Пифагора: c² = a² + b²</li>
+        <li>Проценты: P% от N = (P · N) / 100</li>
+      </ul>
+      <h2>4. Вывод</h2>
+      <p>Математика выступила практическим инструментом. Без верного решения уравнения команда не получила бы первую цифру, ошибка в площади увела бы в ложном направлении, а незнание теоремы Пифагора оставило бы люк закрытым. Квест показал, что абстрактные формулы напрямую влияют на результат реальных задач.</p>
+      <h2>5. Рефлексия (заполняется участником)</h2>
+      <p>1. Мою роль в команде: _______________________________</p>
+      <p>2. Самая интересная задача: __________________________</p>
+      <p>3. Самая сложная математически: ______________________</p>
+      <p>4. Помогла ли команда: ________________________________</p>
+      <p>5. Изменилось ли отношение к темам (дискриминант, Пифагор): _______________</p>
+      <p style="margin-top:30px; text-align:center; color:#666; font-size:12px;">Проект по математике | 8 класс</p>
+    `;
+    preview.style.display = 'block';
+    window.scrollTo(0, document.body.scrollHeight);
+  }
+
+  async function exportPDF() {
+    if (!document.getElementById('reportPreview').innerHTML) generateReport();
+    const { jsPDF } = window.jspdf;
+    const pdf = new jsPDF();
+    const canvas = await html2canvas(document.getElementById('reportPreview'), {scale: 2});
+    const imgData = canvas.toDataURL('image/png');
+    const imgW = 210, pageH = 297;
+    const imgH = canvas.height * imgW / canvas.width;
+    let pos = 0, hLeft = imgH;
+    
+    pdf.addImage(imgData, 'PNG', 0, pos, imgW, imgH);
+    hLeft -= pageH;
+    while (hLeft >= 0) { pos = hLeft - imgH; pdf.addPage(); pdf.addImage(imgData, 'PNG', 0, pos, imgW, imgH); hLeft -= pageH; }
+    pdf.save('math_quest_report.pdf');
+  }
+
+  function exportWord() {
+    if (!document.getElementById('reportPreview').innerHTML) generateReport();
+    const header = "<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'><head><meta charset='utf-8'><style>body{font-family:Arial;font-size:12px}table{border-collapse:collapse;width:100%}th,td{border:1px solid #ccc;padding:6px}th{background:#1e3a8a;color:white}</style></head><body>";
+    const blob = new Blob([header + document.getElementById("reportPreview").innerHTML + "</body></html>"], {type: 'application/msword'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = 'math_quest_report.doc'; a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  // Enter key support
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && document.getElementById('screen-game').classList.contains('active')) checkAnswer();
+  });
+</script>
+
+</body>
+</html>

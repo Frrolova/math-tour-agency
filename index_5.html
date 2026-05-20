@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Симулятор Логистического Центра | 7 класс</title>
+  <style>
+    :root {
+      --bg: #f4f7f6;
+      --card: #ffffff;
+      --primary: #2c3e50;
+      --accent: #3498db;
+      --success: #27ae60;
+      --warning: #f39c12;
+      --text: #333;
+    }
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      margin: 0;
+      padding: 20px;
+      line-height: 1.5;
+    }
+    header {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    header h1 { margin: 0; color: var(--primary); }
+    header p { color: #666; margin-top: 5px; }
+    .container {
+      max-width: 1000px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 20px;
+    }
+    .card {
+      background: var(--card);
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    .card h2 {
+      margin-top: 0;
+      color: var(--primary);
+      border-bottom: 2px solid #eee;
+      padding-bottom: 8px;
+    }
+    label { display: block; margin: 8px 0 4px; font-weight: bold; }
+    input, select, button {
+      padding: 8px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      font-size: 14px;
+      width: 100%;
+      box-sizing: border-box;
+    }
+    button {
+      background: var(--accent);
+      color: white;
+      border: none;
+      cursor: pointer;
+      margin-top: 10px;
+      transition: 0.2s;
+    }
+    button:hover { background: #2980b9; }
+    .result-box {
+      background: #eef7fc;
+      padding: 10px;
+      border-radius: 5px;
+      margin-top: 10px;
+      font-size: 14px;
+    }
+    .formula {
+      background: #f9f9f9;
+      padding: 6px;
+      border-left: 3px solid var(--accent);
+      margin: 8px 0;
+      font-family: monospace;
+      color: #2c3e50;
+    }
+    .status { padding: 5px; border-radius: 4px; font-weight: bold; }
+    .ok { background: #d4edda; color: #155724; }
+    .warn { background: #fff3cd; color: #856404; }
+    .error { background: #f8d7da; color: #721c24; }
+    .schedule-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 5px;
+      margin-top: 10px;
+    }
+    .shift {
+      background: #e0e0e0;
+      padding: 5px;
+      text-align: center;
+      border-radius: 4px;
+    }
+    .active { background: var(--accent); color: white; }
+    footer {
+      text-align: center;
+      margin-top: 30px;
+      color: #777;
+      font-size: 12px;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>🚚 Логистический Центр: Математика в действии</h1>
+  <p>Интерактивный симулятор для проекта по математике (7 класс)</p>
+</header>
+
+<div class="container">
+  <!-- 1. ЗАКАЗЫ -->
+  <div class="card">
+    <h2>📦 Заказы магазинов</h2>
+    <label>Магазин</label>
+    <select id="store">
+      <option value="Магазин «Продукты»">Магазин «Продукты» (15 км)</option>
+      <option value="Магазин «Канцтовары»">Магазин «Канцтовары» (25 км)</option>
+      <option value="Магазин «Игрушки»">Магазин «Игрушки» (35 км)</option>
+    </select>
+
+    <label>Товар</label>
+    <select id="productType">
+      <option value="Продукты">Продукты (кг)</option>
+      <option value="Канцтовары">Канцтовары (шт)</option>
+      <option value="Игрушки">Игрушки (шт)</option>
+    </select>
+
+    <label>Количество</label>
+    <input type="number" id="qty" min="1" value="50">
+
+    <button onclick="addOrder()">➕ Добавить заказ</button>
+
+    <div id="ordersList" class="result-box">Заказов пока нет</div>
+  </div>
+
+  <!-- 2. ТРАНСПОРТ -->
+  <div class="card">
+    <h2>🚛 Транспорт и маршруты</h2>
+    <label>Выберите машину</label>
+    <select id="vehicle">
+      <option value="small">Малый фургон (100 кг/шт)</option>
+      <option value="medium" selected>Средний грузовик (200 кг/шт)</option>
+      <option value="large">Большой грузовик (400 кг/шт)</option>
+    </select>
+
+    <label>Скорость: <span id="speedDisplay">60</span> км/ч</label>
+    <label>Расход топлива: <span id="fuelDisplay">8</span> л/100 км</label>
+    <label>Цена топлива: <span id="priceDisplay">65</span> ₽/л</label>
+
+    <button onclick="calculateRoute()">🧮 Рассчитать маршрут</button>
+    <div id="routeResult" class="result-box">Ожидание расчёта...</div>
+  </div>
+
+  <!-- 3. ГРАФИК И БЮДЖЕТ -->
+  <div class="card">
+    <h2>👥 Сотрудники и бюджет</h2>
+    <label>Кол-во водителей: <input type="number" id="drivers" value="2" min="1"></label>
+    <label>Кол-во грузчиков: <input type="number" id="loaders" value="2" min="1"></label>
+    <label>Ставка водителя (₽/ч): <input type="number" id="driverWage" value="250"></label>
+    <label>Ставка грузчика (₽/ч): <input type="number" id="loaderWage" value="200"></label>
+
+    <button onclick="generateSchedule()">📅 Составить график (8:00–20:00)</button>
+    <div id="scheduleBox" class="schedule-grid">
+      <div class="shift">Смена 1: 8:00–14:00</div>
+      <div class="shift">Обед/перерыв: 13:00–14:00</div>
+      <div class="shift">Смена 2: 14:00–20:00</div>
+    </div>
+
+    <button onclick="calculateBudget()">💰 Рассчитать бюджет за день</button>
+    <div id="budgetResult" class="result-box">Ожидание расчёта...</div>
+  </div>
+
+  <!-- 4. ИТОГИ -->
+  <div class="card" style="grid-column: 1 / -1;">
+    <h2>📊 Итоги и математика проекта</h2>
+    <div id="summaryBox" class="result-box">
+      Заполните заказы, выберите транспорт и нажмите «Рассчитать». Здесь появятся все формулы и итоговая оценка эффективности.
+    </div>
+    <div class="formula">
+      <b>Формулы, используемые в симуляторе:</b><br>
+      • Рейсы = ⌈Заказ / Вместимость⌉<br>
+      • Время = (2 × Расстояние / Скорость) + 0.5 ч (погрузка)<br>
+      • Топливо = (Расстояние × 2) × (Расход / 100)<br>
+      • Зарплата = Часы × Ставка × Кол-во сотрудников<br>
+      • Экономия = (Базовый бюджет − Реальный) / Базовый × 100%
+    </div>
+    <button onclick="exportData()">📥 Сохранить отчёт для проекта (консоль)</button>
+  </div>
+</div>
+
+<footer>Проект по математике, 7 класс | Логистический центр</footer>
+
+<script>
+  // === ДАННЫЕ ===
+  const stores = {
+    "Магазин «Продукты»": 15,
+    "Магазин «Канцтовары»": 25,
+    "Магазин «Игрушки»": 35
+  };
+
+  const vehicles = {
+    small: { cap: 100, fuel: 6, speed: 60 },
+    medium: { cap: 200, fuel: 8, speed: 60 },
+    large: { cap: 400, fuel: 12, speed: 50 }
+  };
+
+  let orders = [];
+
+  // === ФУНКЦИИ ===
+  function addOrder() {
+    const store = document.getElementById('store').value;
+    const type = document.getElementById('productType').value;
+    const qty = parseInt(document.getElementById('qty').value);
+    if (!qty || qty <= 0) return alert('Введите корректное количество');
+
+    orders.push({ store, type, qty });
+    renderOrders();
+  }
+
+  function renderOrders() {
+    const box = document.getElementById('ordersList');
+    if (orders.length === 0) { box.innerHTML = 'Заказов пока нет'; return; }
+    let html = '<table style="width:100%; border-collapse:collapse;"><tr><th>Магазин</th><th>Товар</th><th>Кол-во</th><th></th></tr>';
+    orders.forEach((o, i) => {
+      html += `<tr style="border-bottom:1px solid #eee;"><td>${o.store}</td><td>${o.type}</td><td>${o.qty}</td><td><button onclick="removeOrder(${i})" style="background:#e74c3c;margin:0;padding:2px 6px;">✕</button></td></tr>`;
+    });
+    html += '</table>';
+    box.innerHTML = html;
+  }
+
+  function removeOrder(i) {
+    orders.splice(i, 1);
+    renderOrders();
+  }
+
+  function calculateRoute() {
+    if (orders.length === 0) return alert('Сначала добавьте заказы');
+    const vType = document.getElementById('vehicle').value;
+    const v = vehicles[vType];
+    const totalQty = orders.reduce((sum, o) => sum + o.qty, 0);
+    const maxDist = Math.max(...orders.map(o => stores[o.store]));
+
+    const trips = Math.ceil(totalQty / v.cap);
+    const timePerTrip = (maxDist * 2 / v.speed) + 0.5;
+    const totalTime = trips * timePerTrip;
+    const totalFuel = trips * (maxDist * 2) * (v.fuel / 100);
+    const fuelCost = totalFuel * 65;
+
+    const res = document.getElementById('routeResult');
+    res.innerHTML = `
+      <b>Расчёт маршрута:</b><br>
+      Общая масса/шт: ${totalQty}<br>
+      Вместимость машины: ${v.cap}<br>
+      <span class="formula">Рейсы = ⌈${totalQty} / ${v.cap}⌉ = ${trips}</span><br>
+      Дальний магазин: ${maxDist} км<br>
+      <span class="formula">Время за рейс = (2×${maxDist}/${v.speed}) + 0.5 = ${timePerTrip.toFixed(1)} ч</span><br>
+      Общее время: ${totalTime.toFixed(1)} ч<br>
+      Топливо: ${totalFuel.toFixed(1)} л → ${fuelCost.toFixed(0)} ₽
+    `;
+
+    window.calcData = { trips, totalTime, fuelCost, vType };
+  }
+
+  function generateSchedule() {
+    const drivers = parseInt(document.getElementById('drivers').value);
+    const loaders = parseInt(document.getElementById('loaders').value);
+    const box = document.getElementById('scheduleBox');
+    box.innerHTML = `
+      <div class="shift active">Смена 1: 8:00–14:00 (${drivers} вож., ${loaders} груз.)</div>
+      <div class="shift">Перерыв/обед: 13:00–14:00</div>
+      <div class="shift active">Смена 2: 14:00–20:00 (${drivers} вож., ${loaders} груз.)</div>
+    `;
+  }
+
+  function calculateBudget() {
+    const drivers = parseInt(document.getElementById('drivers').value);
+    const loaders = parseInt(document.getElementById('loaders').value);
+    const dWage = parseFloat(document.getElementById('driverWage').value);
+    const lWage = parseFloat(document.getElementById('loaderWage').value);
+    const workHours = 11; // 8-20 минус 1ч обед
+
+    const wageCost = (drivers * dWage + loaders * lWage) * workHours;
+    const fuelCost = window.calcData ? window.calcData.fuelCost : 0;
+    const total = wageCost + fuelCost;
+
+    const baseBudget = 5000; // примерный базовый бюджет для сравнения
+    const savings = baseBudget > total ? ((baseBudget - total)/baseBudget*100).toFixed(1) : 0;
+
+    const res = document.getElementById('budgetResult');
+    res.innerHTML = `
+      <b>Бюджет за смену:</b><br>
+      Зарплата: ${wageCost.toFixed(0)} ₽<br>
+      Топливо: ${fuelCost.toFixed(0)} ₽<br>
+      <span class="formula">Итого = ${wageCost.toFixed(0)} + ${fuelCost.toFixed(0)} = ${total.toFixed(0)} ₽</span><br>
+      Экономия относительно базового (5000₽): <b>${savings}%</b>
+    `;
+
+    window.calcData.totalCost = total;
+    showSummary();
+  }
+
+  function showSummary() {
+    const d = window.calcData || {};
+    if (!d.trips || !d.totalCost) {
+      document.getElementById('summaryBox').innerHTML = '⚠️ Сначала рассчитайте маршрут и бюджет.';
+      return;
+    }
+    const efficiency = d.totalCost < 4000 ? '✅ Отлично' : d.totalCost < 5000 ? '🟡 Хорошо' : '🔴 Дорого';
+    document.getElementById('summaryBox').innerHTML = `
+      <b>Итоги работы центра:</b><br>
+      Выполнено заказов: ${orders.length}<br>
+      Совершено рейсов: ${d.trips}<br>
+      Время в пути: ${d.totalTime.toFixed(1)} ч<br>
+      Затраты: ${d.totalCost.toFixed(0)} ₽<br>
+      Оценка эффективности: <span class="status ${efficiency.includes('От')?'ok':efficiency.includes('Хор')?'warn':'error'}">${efficiency}</span><br>
+      <i>Математика помогла избежать простоев, правильно рассчитать вместимость и уложиться в бюджет.</i>
+    `;
+  }
+
+  function exportData() {
+    const report = {
+      date: new Date().toLocaleString(),
+      orders,
+      calc: window.calcData || {},
+      employees: {
+        drivers: document.getElementById('drivers').value,
+        loaders: document.getElementById('loaders').value
+      },
+      formulas: {
+        trips: "Math.ceil(order / capacity)",
+        time: "(2*dist/speed)+0.5",
+        fuel: "dist*2*(fuel/100)",
+        cost: "fuelCost + wageCost"
+      }
+    };
+    console.log("Отчёт для проекта:", JSON.stringify(report, null, 2));
+    alert("Данные выведены в консоль браузера (F12 → Console). Скопируйте их для вставки в презентацию или отчёт.");
+  }
+</script>
+
+</body>
+</html>

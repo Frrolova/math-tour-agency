@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Туристическое агентство «Алгебра и Ко»</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <style>
+    :root {
+      --bg: #f0f4f8;
+      --card: #ffffff;
+      --primary: #2563eb;
+      --accent: #f59e0b;
+      --success: #10b981;
+      --danger: #ef4444;
+      --text: #1e293b;
+      --muted: #64748b;
+      --border: #e2e8f0;
+      --font: 'Segoe UI', system-ui, sans-serif;
+    }
+    * { box-sizing: border-box; }
+    body {
+      font-family: var(--font);
+      background: var(--bg);
+      color: var(--text);
+      margin: 0; padding: 20px;
+      line-height: 1.5;
+    }
+    header {
+      text-align: center;
+      background: linear-gradient(135deg, #1e3a8a, #0ea5e9);
+      color: white;
+      padding: 20px;
+      border-radius: 12px;
+      margin-bottom: 20px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+    h1 { margin: 0; font-size: 28px; }
+    .subtitle { color: #cbd5e1; margin-top: 5px; }
+
+    .step-nav {
+      display: flex; justify-content: center; gap: 10px; margin-bottom: 20px; flex-wrap: wrap;
+    }
+    .step-btn {
+      background: var(--card); border: 2px solid var(--border); padding: 8px 16px;
+      border-radius: 20px; cursor: pointer; font-weight: 500; transition: 0.2s;
+    }
+    .step-btn.active { background: var(--primary); color: white; border-color: var(--primary); }
+    .step-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .panel {
+      background: var(--card); padding: 20px; border-radius: 12px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08); display: none; margin-bottom: 20px;
+    }
+    .panel.active { display: block; animation: fadeUp 0.3s ease; }
+    @keyframes fadeUp { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
+
+    .grid-3 {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px;
+    }
+    .card {
+      border: 1px solid var(--border); padding: 15px; border-radius: 8px;
+      background: #f8fafc;
+    }
+    .card h3 { margin: 0 0 10px; color: var(--primary); border-bottom: 2px solid var(--border); padding-bottom: 5px; }
+    label { display: block; margin: 8px 0 4px; font-weight: 500; font-size: 14px; }
+    input, select {
+      width: 100%; padding: 8px; border: 1px solid var(--border); border-radius: 6px; font-size: 14px;
+    }
+    .controls { display: flex; gap: 10px; margin-top: 20px; justify-content: center; flex-wrap: wrap; }
+    button {
+      background: var(--primary); color: white; border: none; padding: 10px 18px;
+      border-radius: 6px; cursor: pointer; font-weight: bold; transition: 0.2s;
+    }
+    button:hover { opacity: 0.9; }
+    button.secondary { background: var(--muted); }
+    button.danger { background: var(--danger); }
+    button.success { background: var(--success); }
+    button:disabled { opacity: 0.5; cursor: wait; }
+
+    .result-box {
+      background: #eff6ff; border-left: 4px solid var(--primary); padding: 10px;
+      margin: 10px 0; font-family: monospace; font-size: 14px; border-radius: 0 6px 6px 0;
+    }
+    table {
+      width: 100%; border-collapse: collapse; margin: 10px 0; font-size: 14px;
+    }
+    th, td { border: 1px solid var(--border); padding: 8px; text-align: left; }
+    th { background: #f1f5f9; color: var(--text); }
+    .total { font-weight: bold; background: #e0f2fe; }
+
+    .dice-area { text-align: center; margin: 20px 0; }
+    .dice {
+      width: 60px; height: 60px; background: white; border: 2px solid var(--border);
+      border-radius: 10px; font-size: 24px; font-weight: bold; display: inline-flex;
+      align-items: center; justify-content: center; margin: 10px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+    .event-msg { background: #fef3c7; padding: 10px; border-radius: 6px; margin: 10px 0; border-left: 4px solid var(--accent); }
+    .math-req { background: #f8fafc; padding: 10px; margin: 10px 0; border-radius: 6px; border: 1px dashed var(--muted); }
+
+    canvas { display: block; margin: 10px auto; max-width: 100%; }
+
+    #reportPreview {
+      display: none; background: #fff; color: #000; padding: 40px; margin: 20px auto;
+      max-width: 850px; box-shadow: 0 0 20px rgba(0,0,0,0.2); border-radius: 4px;
+    }
+    #reportPreview h1, #reportPreview h2 { color: #1e3a8a; border-bottom: 1px solid #ccc; padding-bottom: 5px; }
+    #reportPreview table { width: 100%; border: 1px solid #ccc; margin: 10px 0; }
+    #reportPreview th, #reportPreview td { border: 1px solid #ddd; padding: 8px; }
+    #reportPreview th { background: #1e3a8a; color: #fff; }
+
+    footer { text-align: center; margin-top: 30px; color: var(--muted); font-size: 12px; }
+
+    @media print {
+      body * { visibility: hidden; }
+      #reportPreview, #reportPreview * { visibility: visible; }
+      #reportPreview { display: block !important; position: absolute; left: 0; top: 0; width: 100%; box-shadow: none; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>🌍 Туристическое агентство «Алгебра и Ко»</h1>
+  <p class="subtitle">Интерактивный симулятор для проекта по математике (8 класс)</p>
+</header>
+
+<div class="step-nav">
+  <button class="step-btn active" onclick="goStep(1)">1. Настройки</button>
+  <button class="step-btn" onclick="goStep(2)">2. Сбор данных</button>
+  <button class="step-btn" onclick="goStep(3)">3. Доп. расходы & События</button>
+  <button class="step-btn" onclick="goStep(4)">4. Итоги & Графики</button>
+  <button class="step-btn" onclick="goStep(5)">5. Отчёт & Экспорт</button>
+</div>
+
+<!-- STEP 1 -->
+<div id="step1" class="panel active">
+  <h2>⚙️ Настройки тура</h2>
+  <div class="grid-3">
+    <div>
+      <label>Направление</label>
+      <select id="dest">
+        <option>Санкт-Петербург</option>
+        <option>Золотое кольцо России</option>
+        <option>Озеро Байкал</option>
+        <option>Калининград</option>
+        <option>Сочи (Черноморское побережье)</option>
+      </select>
+    </div>
+    <div>
+      <label>Длительность (дней)</label>
+      <input type="number" id="days" value="7" min="3" max="30">
+    </div>
+    <div>
+      <label>Количество туристов</label>
+      <input type="number" id="travelers" value="2" min="1" max="50">
+    </div>
+  </div>
+  <div class="controls"><button onclick="nextStep(2)">Далее: Ввести цены →</button></div>
+</div>
+
+<!-- STEP 2 -->
+<div id="step2" class="panel">
+  <h2>💶 Ввод базовых цен (на 1 чел.)</h2>
+  <div class="grid-3">
+    <div class="card">
+      <h3>🟦 Эконом</h3>
+      <label>Билеты (туда-обратно)</label> <input type="number" id="ecoFlight" value="5000">
+      <label>Отель (₽/ночь)</label> <input type="number" id="ecoHotel" value="1500">
+      <label>Экскурсии (всего)</label> <input type="number" id="ecoExc" value="3000">
+      <label>Питание (₽/день)</label> <input type="number" id="ecoMeal" value="800">
+    </div>
+    <div class="card">
+      <h3>🟩 Стандарт</h3>
+      <label>Билеты (туда-обратно)</label> <input type="number" id="stdFlight" value="9000">
+      <label>Отель (₽/ночь)</label> <input type="number" id="stdHotel" value="3000">
+      <label>Экскурсии (всего)</label> <input type="number" id="stdExc" value="6000">
+      <label>Питание (₽/день)</label> <input type="number" id="stdMeal" value="1200">
+    </div>
+    <div class="card">
+      <h3>🟨 Люкс</h3>
+      <label>Билеты (туда-обратно)</label> <input type="number" id="luxFlight" value="18000">
+      <label>Отель (₽/ночь)</label> <input type="number" id="luxHotel" value="7000">
+      <label>Экскурсии (всего)</label> <input type="number" id="luxExc" value="15000">
+      <label>Питание (₽/день)</label> <input type="number" id="luxMeal" value="2500">
+    </div>
+  </div>
+  <div class="controls">
+    <button class="secondary" onclick="nextStep(1)">← Назад</button>
+    <button onclick="calcBase()">Рассчитать базовую стоимость →</button>
+  </div>
+</div>
+
+<!-- STEP 3 -->
+<div id="step3" class="panel">
+  <h2>📊 Дополнительные расходы и «Случайные события»</h2>
+  <div class="grid-3">
+    <div>
+      <label>Страховка (% от базовой стоимости)</label>
+      <input type="number" id="insRate" value="3" min="0" max="20">
+    </div>
+    <div>
+      <label>Сувениры (% от базовой стоимости)</label>
+      <input type="number" id="sovRate" value="10" min="0" max="30">
+    </div>
+    <div>
+      <label>НДС / комиссия агентства (%)</label>
+      <input type="number" id="taxRate" value="5" min="0" max="20">
+    </div>
+  </div>
+
+  <h3 style="margin-top:20px; text-align:center;">🎲 Игровое событие «Непредвиденные расходы/Бонус»</h3>
+  <p style="text-align:center; color:var(--muted);">Бросьте кубик. Если выпадет событие, решите задачу, чтобы применить бонус или штраф к бюджету.</p>
+  
+  <div class="dice-area">
+    <div class="dice" id="dice1">🎲</div>
+    <button onclick="rollEvent()">Бросить кубик</button>
+  </div>
+  <div id="eventBox" style="display:none;">
+    <div class="event-msg" id="eventText"></div>
+    <div class="math-req" id="mathTask"></div>
+    <input type="text" id="eventAns" placeholder="Ваш ответ (число)" style="max-width:200px;">
+    <button class="success" onclick="checkEvent()">Применить</button>
+    <span id="eventResult" style="margin-left:10px; font-weight:bold;"></span>
+  </div>
+
+  <div class="controls">
+    <button class="secondary" onclick="nextStep(2)">← Назад</button>
+    <button onclick="calcFinal()">Итоговый расчёт & Графики →</button>
+  </div>
+</div>
+
+<!-- STEP 4 -->
+<div id="step4" class="panel">
+  <h2>📈 Результаты и «Паспорт тура»</h2>
+  <div class="grid-3">
+    <div id="ecoResult" class="card"></div>
+    <div id="stdResult" class="card"></div>
+    <div id="luxResult" class="card"></div>
+  </div>
+  <h3 style="text-align:center; margin:20px 0;">Структура расходов (на примере «Стандарт»)</h3>
+  <canvas id="pieChart" width="300" height="300"></canvas>
+  <div class="controls">
+    <button class="secondary" onclick="nextStep(3)">← Назад</button>
+    <button onclick="generatePassport()">📄 Сформировать паспорт тура →</button>
+  </div>
+</div>
+
+<!-- STEP 5 -->
+<div id="step5" class="panel">
+  <h2>📤 Экспорт отчёта для защиты проекта</h2>
+  <p>Отчёт содержит все расчёты, формулы, сравнительную таблицу, графики и рефлексивные вопросы.</p>
+  <div style="display:flex; gap:10px; flex-wrap:wrap;">
+    <button class="danger" onclick="exportPDF()">📥 Скачать PDF</button>
+    <button onclick="exportWord()">📝 Скачать Word</button>
+    <button class="success" onclick="window.print()">🖨️ Печать</button>
+  </div>
+  <div id="passportBox" class="result-box" style="margin-top:15px; min-height:100px;">
+    Нажмите «Сформировать паспорт тура» на предыдущем шаге, чтобы создать документ.
+  </div>
+</div>
+
+<div id="reportPreview"></div>
+
+<footer>Проект по математике | 8 класс | «Математическое путешествие: Туристическое агентство „Алгебра и Ко“»</footer>
+
+<script>
+  // === STATE ===
+  let state = {
+    base: { eco:0, std:0, lux:0 },
+    final: { eco:0, std:0, lux:0 },
+    eventApplied: false,
+    eventMod: 0,
+    step: 1
+  };
+
+  // === NAV ===
+  function nextStep(n) {
+    if(n===4 && !state.base.eco) { calcBase(); }
+    if(n===5 && !state.final.eco) { calcFinal(); }
+    state.step = n;
+    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+    document.getElementById('step'+n).classList.add('active');
+    document.querySelectorAll('.step-btn').forEach((b,i) => {
+      b.classList.toggle('active', i+1===n);
+    });
+    if(n===4) renderChart();
+  }
+
+  function goStep(n) { nextStep(n); }
+
+  // === CALCULATIONS ===
+  function calcBase() {
+    const d = parseInt(document.getElementById('days').value) || 7;
+    const get = (id) => parseFloat(document.getElementById(id).value) || 0;
+    
+    state.base.eco = get('ecoFlight') + get('ecoHotel')*d + get('ecoExc') + get('ecoMeal')*d;
+    state.base.std = get('stdFlight') + get('stdHotel')*d + get('stdExc') + get('stdMeal')*d;
+    state.base.lux = get('luxFlight') + get('luxHotel')*d + get('luxExc') + get('luxMeal')*d;
+    
+    alert(`Базовая стоимость (на 1 чел.):\nЭконом: ${state.base.eco} ₽\nСтандарт: ${state.base.std} ₽\nЛюкс: ${state.base.lux} ₽`);
+    nextStep(3);
+  }
+
+  function calcFinal() {
+    const ins = parseFloat(document.getElementById('insRate').value)/100 || 0;
+    const sov = parseFloat(document.getElementById('sovRate').value)/100 || 0;
+    const tax = parseFloat(document.getElementById('taxRate').value)/100 || 0;
+    const mod = 1 + (state.eventApplied ? state.eventMod : 0);
+
+    ['eco','std','lux'].forEach(k => {
+      let base = state.base[k];
+      let extra = base * (ins + sov + tax);
+      state.final[k] = Math.round((base + extra) * mod);
+    });
+
+    renderResults();
+    renderChart();
+    nextStep(4);
+  }
+
+  function renderResults() {
+    const r = (id, obj, name) => {
+      document.getElementById(id).innerHTML = `
+        <h3>${name}</h3>
+        <table>
+          <tr><td>Базовая стоимость</td><td>${obj.base.toLocaleString()} ₽</td></tr>
+          <tr><td>Доп. расходы (${((parseFloat(document.getElementById('insRate').value)+parseFloat(document.getElementById('sovRate').value)+parseFloat(document.getElementById('taxRate').value))).toFixed(0)}%)</td><td>${(obj.base * (parseFloat(document.getElementById('insRate').value)+parseFloat(document.getElementById('sovRate').value)+parseFloat(document.getElementById('taxRate').value))/100).toFixed(0)} ₽</td></tr>
+          ${state.eventApplied ? `<tr><td>Событие (${state.eventMod>0?'+':''}${(state.eventMod*100).toFixed(0)}%)</td><td>${state.eventMod>0?'+':''}${(obj.base*state.eventMod).toFixed(0)} ₽</td></tr>` : ''}
+          <tr class="total"><td>ИТОГО</td><td>${obj.final.toLocaleString()} ₽</td></tr>
+        </table>
+      `;
+    };
+    r('ecoResult', {base: state.base.eco, final: state.final.eco}, '🟦 Эконом');
+    r('stdResult', {base: state.base.std, final: state.final.std}, '🟩 Стандарт');
+    r('luxResult', {base: state.base.lux, final: state.final.lux}, '🟨 Люкс');
+  }
+
+  // === DICE & EVENTS ===
+  const events = [
+    { txt: "✈️ Акция авиакомпании! Скидка 10% на билеты.", type: "percent", val: -0.10, q: "Сколько ₽ составит скидка, если база тура 40 000 ₽?", a: 4000 },
+    { txt: "🌧️ Дождливая погода. Придётся добавить 1500 ₽ на развлечения в помещении.", type: "fixed", val: 1500, q: "Какой процент от базы 30 000 ₽ составляет 1500 ₽? (в десятичной дроби)", a: 0.05 },
+    { txt: "🎁 Выиграли лотерею! Бонус 5% к бюджету.", type: "percent", val: -0.05, q: "Чему равен 1% от 45 000 ₽?", a: 450 },
+    { txt: "📈 Рост цен на топливо. +8% к транспортным расходам.", type: "percent", val: 0.08, q: "Вычислите 8% от 12 000 ₽", a: 960 },
+    { txt: "🏨 Отель дал скидку 2000 ₽ за раннее бронирование.", type: "fixed", val: -2000, q: "Сколько будет 2000 от 50000? (в %) Ответ: 4%", a: 4 },
+    { txt: "💡 Ничего не произошло. Бюджет без изменений.", type: "none", val: 0, q: "", a: 0 }
+  ];
+
+  function rollEvent() {
+    const box = document.getElementById('eventBox');
+    const dice = document.getElementById('dice1');
+    dice.style.animation = "shake 0.5s";
+    setTimeout(()=>{
+      const ev = events[Math.floor(Math.random()*events.length)];
+      state.eventApplied = false;
+      state.eventMod = 0;
+      
+      document.getElementById('eventText').textContent = ev.txt;
+      document.getElementById('mathTask').style.display = ev.type==='none'?'none':'block';
+      document.getElementById('mathTask').textContent = ev.type==='none'?'Бросьте снова или перейдите к расчётам.' : `Решите, чтобы применить: ${ev.q}`;
+      document.getElementById('eventAns').value = '';
+      document.getElementById('eventResult').textContent = '';
+      box.style.display = ev.type==='none'?'block':'block';
+      
+      if(ev.type==='none') {
+        document.getElementById('eventResult').textContent = "✅ Бюджет без изменений";
+        state.eventApplied = true; state.eventMod = 0;
+      }
+    }, 500);
+  }
+
+  function checkEvent() {
+    const ev = events.find(e => document.getElementById('eventText').textContent.includes(e.txt));
+    if(!ev || ev.type==='none') return;
+    let ans = parseFloat(document.getElementById('eventAns').value);
+    let correct = ev.a;
+    
+    // Allow small floating tolerance
+    let ok = false;
+    if(Math.abs(ans - correct) < 1) ok = true;
+    if(ev.type==='percent' && Math.abs((ans/correct) - 1) < 0.05) ok = true;
+
+    if(ok) {
+      document.getElementById('eventResult').innerHTML = '<span style="color:var(--success)">✅ Верно! Бонус/штраф применён.</span>';
+      state.eventApplied = true;
+      state.eventMod = ev.val;
+    } else {
+      document.getElementById('eventResult').innerHTML = '<span style="color:var(--danger)">❌ Ошибка. Событие не применено.</span>';
+    }
+  }
+
+  // === CHART ===
+  function renderChart() {
+    const canvas = document.getElementById('pieChart');
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    
+    const d = parseInt(document.getElementById('days').value)||7;
+    const get = (id)=>parseFloat(document.getElementById(id).value)||0;
+    let base = state.base.std;
+    let flight = get('stdFlight');
+    let hotel = get('stdHotel')*d;
+    let exc = get('stdExc');
+    let meal = get('stdMeal')*d;
+    
+    if(base<=0) { ctx.fillText('Введите данные', 100, 150); return; }
+
+    const data = [
+      {val: flight, color: '#3b82f6', label: 'Билеты'},
+      {val: hotel, color: '#10b981', label: 'Отель'},
+      {val: exc, color: '#f59e0b', label: 'Экскурсии'},
+      {val: meal, color: '#ef4444', label: 'Питание'}
+    ];
+
+    let total = data.reduce((s,i)=>s+i.val,0);
+    let start = 0;
+    const cx = canvas.width/2, cy = canvas.height/2, r = 100;
+
+    data.forEach(slice => {
+      const angle = (slice.val/total)*2*Math.PI;
+      ctx.beginPath();
+      ctx.moveTo(cx,cy);
+      ctx.arc(cx,cy,r,start,start+angle);
+      ctx.fillStyle = slice.color;
+      ctx.fill();
+      start += angle;
+    });
+
+    // Legend
+    ctx.fillStyle = '#1e293b';
+    ctx.font = '12px sans-serif';
+    let ly = 20;
+    data.forEach(s => {
+      ctx.fillStyle = s.color;
+      ctx.fillRect(220, ly, 12, 12);
+      ctx.fillStyle = '#333';
+      ctx.fillText(`${s.label}: ${((s.val/total)*100).toFixed(0)}%`, 238, ly+10);
+      ly += 20;
+    });
+  }
+
+  // === REPORT & EXPORT ===
+  function generatePassport() {
+    const d = parseInt(document.getElementById('days').value)||7;
+    const dest = document.getElementById('dest').value;
+    const tr = parseInt(document.getElementById('travelers').value)||1;
+    const date = new Date().toLocaleString('ru-RU');
+    
+    let table = `<table>
+      <tr><th>Статья расходов</th><th>Эконом</th><th>Стандарт</th><th>Люкс</th></tr>
+      <tr><td>Билеты</td><td>${state.base.eco * (parseFloat(document.getElementById('ecoFlight').value)||0) / (parseFloat(document.getElementById('ecoFlight').value) + (parseFloat(document.getElementById('ecoHotel').value)*d) + (parseFloat(document.getElementById('ecoExc').value)) + (parseFloat(document.getElementById('ecoMeal').value)*d))}</td><td>${state.base.std * (parseFloat(document.getElementById('stdFlight').value)||0) / (parseFloat(document.getElementById('stdFlight').value) + (parseFloat(document.getElementById('stdHotel').value)*d) + (parseFloat(document.getElementById('stdExc').value)) + (parseFloat(document.getElementById('stdMeal').value)*d))}</td><td>${state.base.lux * (parseFloat(document.getElementById('luxFlight').value)||0) / (parseFloat(document.getElementById('luxFlight').value) + (parseFloat(document.getElementById('luxHotel').value)*d) + (parseFloat(document.getElementById('luxExc').value)) + (parseFloat(document.getElementById('luxMeal').value)*d))}</td></tr>`;
+    // Simplified for robustness in auto-gen
+    table = `<table>
+      <tr><th>Категория</th><th>Базовая (₽)</th><th>Доп. расходы (%)</th><th>Событие</th><th>ИТОГО (₽)</th></tr>
+      <tr><td>Эконом</td><td>${state.base.eco.toLocaleString()}</td><td>${(parseFloat(document.getElementById('insRate').value)+parseFloat(document.getElementById('sovRate').value)+parseFloat(document.getElementById('taxRate').value))}%</td><td>${state.eventApplied?'Применён':'Нет'}</td><td><b>${state.final.eco.toLocaleString()}</b></td></tr>
+      <tr><td>Стандарт</td><td>${state.base.std.toLocaleString()}</td><td>${(parseFloat(document.getElementById('insRate').value)+parseFloat(document.getElementById('sovRate').value)+parseFloat(document.getElementById('taxRate').value))}%</td><td>${state.eventApplied?'Применён':'Нет'}</td><td><b>${state.final.std.toLocaleString()}</b></td></tr>
+      <tr><td>Люкс</td><td>${state.base.lux.toLocaleString()}</td><td>${(parseFloat(document.getElementById('insRate').value)+parseFloat(document.getElementById('sovRate').value)+parseFloat(document.getElementById('taxRate').value))}%</td><td>${state.eventApplied?'Применён':'Нет'}</td><td><b>${state.final.lux.toLocaleString()}</b></td></tr>
+    </table>`;
+
+    const preview = document.getElementById('reportPreview');
+    preview.innerHTML = `
+      <h1>📜 Паспорт тура: ${dest}</h1>
+      <p><b>Агентство:</b> Алгебра и Ко | <b>Дата формирования:</b> ${date}<br>
+      <b>Длительность:</b> ${d} дней | <b>Группа:</b> ${tr} чел.</p>
+      
+      <h2>1. Цель проекта</h2>
+      <p>Научиться применять математические навыки (проценты, пропорции, таблицы, анализ данных) для планирования бюджета и выбора оптимального туристического маршрута.</p>
+      
+      <h2>2. Смета расходов</h2>
+      ${table}
+      
+      <h2>3. Математические формулы</h2>
+      <ul>
+        <li>Базовая стоимость = Билеты + (Отель × дни) + Экскурсии + (Питание × дни)</li>
+        <li>Дополнительные расходы = База × (Страховка% + Сувениры% + Комиссия%)</li>
+        <li>Итоговая цена = (База + Доп.) × (1 ± % от события)</li>
+        <li>Соотношение цены и качества: ΔЦены / ΔКомфорта (сравнительный анализ)</li>
+      </ul>
+      
+      <h2>4. Вывод</h2>
+      <p>На основе расчётов, вариант «Стандарт» является оптимальным. При переплате всего ~${(((state.final.std-state.final.eco)/state.final.eco)*100).toFixed(0)}% по сравнению с «Экономом», туристы получают проживание классом выше, расширенную экскурсионную программу и комфортное питание. Это демонстрирует принцип «золотой середины» в экономике.</p>
+      
+      <h2>5. Рефлексия (для заполнения)</h2>
+      <p>1. Трудности при сборе реальных цен: _________________________________________</p>
+      <p>2. Как изменились бы расчёты при изменении курса валют/инфляции: __________________</p>
+      <p>3. Самый важный навык из математики: _________________________________________</p>
+      <p>4. Захотелось ли отправиться в путешествие по этому маршруту: ____________________</p>
+      
+      <p style="margin-top:30px; text-align:center; color:#666; font-size:12px;">Проект по математике | 8 класс</p>
+    `;
+    document.getElementById('passportBox').innerHTML = `<p>✅ Паспорт сформирован. Проверьте вкладку «Отчёт» или нажмите кнопку экспорта.</p>`;
+    preview.style.display = 'block';
+  }
+
+  async function exportPDF() {
+    if(!document.getElementById('reportPreview').innerHTML) { generatePassport(); await new Promise(r=>setTimeout(r,500)); }
+    const { jsPDF } = window.jspdf;
+    const pdf = new jsPDF();
+    const canvas = await html2canvas(document.getElementById('reportPreview'), {scale: 2});
+    const img = canvas.toDataURL('image/png');
+    const imgW = 210, pageH = 297;
+    const imgH = canvas.height * imgW / canvas.width;
+    let pos=0, hLeft=imgH;
+    pdf.addImage(img, 'PNG', 0, pos, imgW, imgH);
+    hLeft -= pageH;
+    while(hLeft>=0){ pos=hLeft-imgH; pdf.addPage(); pdf.addImage(img, 'PNG', 0, pos, imgW, imgH); hLeft-=pageH; }
+    pdf.save('tour_agency_report.pdf');
+  }
+
+  function exportWord() {
+    if(!document.getElementById('reportPreview').innerHTML) generatePassport();
+    const h = "<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'><head><meta charset='utf-8'><style>body{font-family:Arial;font-size:12px}table{border-collapse:collapse;width:100%}th,td{border:1px solid #ccc;padding:6px}th{background:#1e3a8a;color:white}</style></head><body>";
+    const blob = new Blob([h + document.getElementById("reportPreview").innerHTML + "</body></html>"], {type: 'application/msword'});
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'tour_agency_report.doc'; a.click();
+  }
+
+  window.onload = () => goStep(1);
+</script>
+</body>
+</html>
